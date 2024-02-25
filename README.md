@@ -1,3 +1,5 @@
+The C files are the code, the exe files are the portable executables.
+
 To compile (from C source files):
 
 1:
