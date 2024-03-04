@@ -1,6 +1,7 @@
 init.py and openCam.py need to be in the same directory, run init.
 
 
+C files are broken for now, priority is elsewhere.
 The C files are the code, the exe files are the portable executables.
 
 To compile (from C source files):
