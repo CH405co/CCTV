@@ -13,26 +13,29 @@ if no cams are found, the printout is just blank. Maybe add something that says 
 preprogram window locations
 open all cams at once
 Plugins?
-handle tmp files a bit better
 
 ** UX & Design **
-USA Flag on the beginning
 more colors and all that
 """
 
 
 # Imports
 import cv2
+import getpass
+import hashlib
 import os
+import pathlib
 import platform
 import subprocess
 import tempfile
 import time
 
 # vars
+attempts = 0 # This is used to track logins
 cam = 0 # with this as the default, it should go to the webcam automatically and not crash.
 camInf = 0     # used in camInfo()
 index = ""     # used in openCamFeed()
+#name = ""      # store username globally, coming later, i'm getting ahead of myself in these updates.
 numCams = 0    # used in camCount()
 openCams = []
 tempPath = ""  # used to create list of cams
@@ -83,6 +86,64 @@ def camInfo(filePath): # this is used to scrape data from the available cameras 
                 print("No cameras were detected on your system. Try reconnecting the cameras.")
                 break
 
+def checkForAcc():
+    findAcc = list(pathlib.Path('./').glob('*.rpscf')) # look for associated save filetypes
+
+    if not findAcc: # none are found
+        newAcc = input("No user accounts have been found. Would you like to make one? y/n\n> ").lower() # create new acc?
+
+        # Handle new acc
+        if newAcc == "y": # create new account
+            # general advice to create an admin account
+            print("\n\nYou are required to create the administrator account first. The username for this account will be \"admin\"\n")
+            success = 0
+            while success != 1:
+                # collect creds
+                newName = "admin"
+                print("Please enter the password below, then confirm it. ")
+                newPass1 = getpass.getpass()
+                newPass2 = getpass.getpass()
+
+                # confirm creds
+                if newPass1 == newPass2:
+                    print("\n\nCredentials confirmed, creating account\n") # create the account after this
+                    success = 1
+
+                    # generate filename
+                    newAccName = newName + ".rpscf"
+
+                    # encrypt password
+                    ep = hashlib.new('sha256')
+                    ep.update(newPass1.encode())
+
+                    # write to new file
+                    with open(newAccName, 'a+') as create:
+                        create.write(str(ep.hexdigest()))
+
+                    # Without this, it dumps the user straight in. Make them login.
+                    print("Account creation successful! Please log in now! (Username: admin)\n\n")
+                    login()
+
+                else:
+                    retry = input("Passwords do not match. Try again? y/n\n> ")
+
+                    if retry == "y":
+                        print("Returning to user creation.\n")
+                    elif retry == "n":
+                        input("Ending the program. Goodbye!")
+                        quit()
+
+
+        elif newAcc == "n":
+            input("Account creation canceled. Goodbye!")
+            quit()
+        else:
+            print("Input not understood")
+        
+    else: # acc is found
+        #print("Not empty?") # call login() from here
+        login()
+
 def checkOpenCam(index): # the entire purpose of this is error handling. It checks if the camera is already streaming, then sends the user back accordingly.
     if index not in openCams: # this works perfectly, because any
          # This catches camera indices that are too high. Ill add low later if this works. Heres the math again to subtract that one difference.
@@ -100,7 +161,7 @@ def checkOpenCam(index): # the entire purpose of this is error handling. It chec
                 print("Fetching camera information...\n")
                 printCamInfo(tempPath)
             else:
-                input("Sorry but " + index + " is not a valid input. Please enter a number.")
+                input("Sorry but " + index + " is not a valid input. Please enter a number, press enter to continue.")
                 index = ""
                 commandMode()
     
@@ -175,6 +236,42 @@ def flag():
         else:
             print(stars + line + reset)
 
+def login(): # this will be used to login securely
+    # kick out at three failed attempts
+    global attempts # get this to track login attempts
+    if attempts == 3:
+        input("Too many failed attempts have been made, exiting now. Press enter to close...")
+        quit()
+
+    # collect creds
+    global name
+    name = input("Username: ")
+    pwd = getpass.getpass()           # input("Password: ")
+
+    # encrypt the password inputted to sha-256
+    # use this to print the value   print(e.hexdigest())
+    e = hashlib.new('sha256')
+    e.update(pwd.encode())
+
+    # create file name for search
+    uname = name + '.rpscf'
+
+    # search for the username
+    try: # try to open the file
+        with open(uname, 'r') as creds: # open the file
+            val = creds.read() # read the file, line 1 will be the password.
+
+        if val == e.hexdigest(): # If the saved hash = input hash, get past login.
+            print("Login success") # Login code here
+        else: # Password didn't work.
+            print("Username / password is incorrect")
+            attempts += 1 # add one
+            login()
+    except: # Failure if file not found
+        print("\nUsername / password is incorrect\n")
+        attempts += 1 # add one
+        login()
+
 def openCamFeed():
     index = input("\nPlease select a camera number to view. If you are unsure of what cameras are available, type \"list\"\nTo return to the main menu, type \"back\"\n\n> ") # collect input
     
@@ -219,6 +316,7 @@ def printCamInfo(tempPath):
 # runtime
 # start the camera detection phase
 def main():
+    checkForAcc() # this leads to login() now, it won't be called in main() anymore.
     clearTemps('.tmp')
     os.system("cls")
     flag()
