@@ -1,5 +1,5 @@
 """
-
+** ignore this section for now **
 IN THIS VERSION, minor bug fixes, im gonna start with the cam double checker, then move onto the flag.
 
 
@@ -132,13 +132,17 @@ def checkForAcc():
                     elif retry == "n":
                         input("Ending the program. Goodbye!")
                         quit()
+                    else:
+                        print("\nInput not understood\n")
+                        checkForAcc()
 
 
         elif newAcc == "n":
             input("Account creation canceled. Goodbye!")
             quit()
         else:
-            print("Input not understood")
+            print("\nInput not understood\n")
+            checkForAcc()
         
     else: # acc is found
         #print("Not empty?") # call login() from here
